@@ -11,14 +11,15 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { getGuestUser } from "./guest.js?v=20261127063315";
+import { getGuestUser } from "./guest.js?v=20261127063715";
 import {
   buildSpxResult,
   filterSpxCandidates,
   normalizeResi,
+  parseSpxAwbList,
   parseSpxCandidates,
   parseSpxTracking,
-} from "./spx-data.js";
+} from "./spx-data.js?v=20261127063715";
 
 // ── Constants ──
 const PREFIX = "0046";
@@ -400,7 +401,7 @@ function setCarrierMode(courier) {
   document.getElementById("txtAwb").placeholder = isSpx
     ? "Tempel satu atau beberapa nomor resi SPX"
     : "004612348765\n004612348766";
-  log(`Kurir aktif: ${isSpx ? "SPX (pencarian tanggal/jam dari kandidat)" : "SiCepat"}.`, "system");
+  log(`Kurir aktif: ${isSpx ? "SPX (tracking live dengan filter tanggal/jam)" : "SiCepat"}.`, "system");
 }
 
 async function loadSpxCandidates(event) {
@@ -482,9 +483,11 @@ async function trackSpxBatch(awbList) {
 }
 
 async function trackSpxSearch(targetDate, jam, timeRange, kota) {
-  const candidates = filterSpxCandidates(spxCandidates, targetDate, timeRange);
+  const fileCandidates = filterSpxCandidates(spxCandidates, targetDate, timeRange);
+  const enteredAwbs = parseSpxAwbList(document.getElementById("txtAwb").value);
+  const candidates = fileCandidates.length > 0 ? fileCandidates : enteredAwbs;
   if (candidates.length === 0) {
-    log(`Tidak ada kandidat SPX pada ${targetDate}${jam ? ` jam ${jam}` : ""}. Periksa rentang tanggal/jam atau file kandidat.`, "warning");
+    log("Masukkan nomor resi SPX yang ingin dicari di kolom NOMOR RESI. File daftar kandidat hanya diperlukan jika ingin mencari dari daftar kandidat.", "warning");
     return;
   }
 
@@ -503,7 +506,7 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
   results = [];
   startTime = Date.now();
   log(`=== PENCARIAN SPX: TANGGAL/BULAN + JAM ===`, "system");
-  log(`Target=${targetDate} | Jam=${jam || "semua"} | Kandidat=${candidates.length}${kota ? ` | Kota=${kota}` : ""}`, "info");
+  log(`Target=${targetDate} | Jam=${jam || "semua"} | Resi=${candidates.length}${kota ? ` | Kota=${kota}` : ""}`, "info");
 
   let nextIndex = 0;
   let checked = 0;
@@ -525,17 +528,18 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
         checked++;
         const entry = response.ok && payload?.ok
           ? payload.result
-          : spxTracking.get(normalizeResi(awb)) ||
-            spxTracking.get(candidateNumber) || {
-              resi: awb,
-              waybill_id: awb,
-              latest_status: "Belum ada status live",
-              latest_checkpoint_date: candidate.date,
-              latest_note: "Waktu dari data kandidat SPX",
-              records: [],
-            };
+          : spxTracking.get(normalizeResi(awb)) || spxTracking.get(candidateNumber);
         if (entry) {
-          const matchedEvent = (entry.records || []).find((record) => {
+          const records = entry.records?.length
+            ? entry.records
+            : entry.latest_checkpoint_date
+              ? [{
+                  actual_time: entry.latest_checkpoint_date,
+                  status: entry.latest_status,
+                  message: entry.latest_note,
+                }]
+              : [];
+          const matchedEvent = records.find((record) => {
             const timestamp = record.actual_time
               ? parseSpxDate(record.actual_time)
               : new Date(Number(record.timestamp) * 1000);
@@ -549,11 +553,7 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
             const eventText = record.message || record.description || "";
             const cityMatches = !kota || matchDestination(eventText, kota);
             return dateMatches && timeMatches && cityMatches;
-          }) || (!kota || matchDestination(entry.latest_note || "", kota) ? {
-            actual_time: parseSpxDate(candidate.date).toISOString(),
-            status: entry.latest_status || "Belum ada status live",
-            message: entry.latest_note || "Waktu dari data kandidat SPX",
-          } : null);
+          });
 
           if (matchedEvent) {
             const tracking = new Map([[normalizeResi(awb), entry]]);
@@ -578,24 +578,6 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
         if (cts.cancelled) return;
         errors++;
         if (errors <= 5) log(`Gagal cek ${awb}: ${error.message}`, "warning");
-        if (!kota) {
-          const entry = spxTracking.get(normalizeResi(awb)) ||
-            spxTracking.get(candidateNumber) || {
-              resi: awb,
-              waybill_id: awb,
-              latest_status: "Belum ada status live",
-              latest_checkpoint_date: candidate.date,
-              latest_note: "Waktu dari data kandidat SPX",
-              records: [],
-            };
-          const result = buildSpxResult(awb, spxCandidates, new Map([[normalizeResi(awb), entry]]));
-          const candidateDateTime = formatSpxDateTime(parseSpxDate(candidate.date));
-          result.tanggal = candidateDateTime.date;
-          result.jam = candidateDateTime.time;
-          result.lastUpdate = `${result.tanggal} ${result.jam}`;
-          results.push(result);
-          renderResults();
-        }
       }
 
       if (checked > 0 && checked % 25 === 0) {
@@ -717,10 +699,6 @@ async function btnTrackSearchClick() {
     }
     if (jam && !timeRange) {
       log("Format jam harus HH:mm atau HH:mm-HH:mm. Contoh: 11:00-13:00", "warning");
-      return;
-    }
-    if (spxCandidates.size === 0) {
-      log("Pilih file daftar resi valid SPX terlebih dahulu pada DATA SNAPSHOT SPX.", "warning");
       return;
     }
     await trackSpxSearch(tgl, jam, timeRange, kota);

@@ -1,5 +1,14 @@
 export const normalizeResi = (value) => String(value ?? "").trim().toUpperCase();
 
+export function parseSpxAwbList(value) {
+  const awbs = new Map();
+  for (const rawAwb of String(value ?? "").split(/[\s,;]+/)) {
+    const resi = normalizeResi(rawAwb);
+    if (resi && !awbs.has(resi)) awbs.set(resi, { resi, date: "" });
+  }
+  return [...awbs.values()];
+}
+
 export function filterSpxCandidates(candidates, dateFilter, timeRange) {
   if (!/^\d{4}-\d{2}(?:-\d{2})?$/.test(dateFilter)) return [];
   return [...candidates.values()].filter((candidate) => {

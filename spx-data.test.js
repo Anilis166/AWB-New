@@ -3,9 +3,21 @@ import assert from "node:assert/strict";
 import {
   buildSpxResult,
   filterSpxCandidates,
+  parseSpxAwbList,
   parseSpxCandidates,
   parseSpxTracking,
 } from "./public/spx-data.js";
+
+test("parses known SPX AWBs from pasted lines and deduplicates them", () => {
+  assert.deepEqual(
+    parseSpxAwbList("SPXID001B\nspxid001b, 002B; SPXID003B"),
+    [
+      { resi: "SPXID001B", date: "" },
+      { resi: "002B", date: "" },
+      { resi: "SPXID003B", date: "" },
+    ],
+  );
+});
 
 test("parses and deduplicates SPX candidate JSONL case-insensitively", () => {
   const candidates = parseSpxCandidates(

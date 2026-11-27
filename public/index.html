@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261127063315">
+  <link rel="stylesheet" href="style.css?v=20261127063715">
   <link rel="stylesheet" href="carrier.css">
 
   <!-- ========================================== -->
@@ -161,7 +161,7 @@
     </div>
     <div class="splash-segbar" id="splashSegbar"></div>
     <!-- Footer -->
-    <div class="splash-footer">v2.1.0 WEB &nbsp;•&nbsp; build 2026.11.27 06:33</div>
+    <div class="splash-footer">v2.1.0 WEB &nbsp;•&nbsp; build 2026.11.27 06:37</div>
   </div>
 </div>
 
@@ -211,11 +211,11 @@
         </div>
         <label class="field-label" for="spxCandidatesFile">DAFTAR RESI VALID</label>
         <input id="spxCandidatesFile" class="spx-file-input" type="file" accept=".json,.jsonl,.ndjson">
-        <p id="spxCandidatesInfo" class="field-hint">Pilih valid_spx.jsonl atau candidates.json sebelum mencari berdasarkan tanggal/bulan dan jam.</p>
+        <p id="spxCandidatesInfo" class="field-hint">Opsional: unggah daftar kandidat. Tanpa file, pencarian tanggal/jam memakai nomor resi di kolom NOMOR RESI.</p>
         <label class="field-label" for="spxTrackingFiles">HASIL TRACKING</label>
         <input id="spxTrackingFiles" class="spx-file-input" type="file" accept=".json,application/json" multiple>
         <p id="spxTrackingInfo" class="field-hint">Pilih hasil_match_spx.json atau file status JSON.</p>
-        <p class="spx-local-note">Mode SPX saat ini mencocokkan snapshot yang dipilih, bukan tracking live.</p>
+        <p class="spx-local-note">SPX dilacak melalui API live. Filter tanggal/jam hanya memeriksa resi yang dimasukkan atau ada di file kandidat.</p>
       </div>
 
       <!-- Group 2: Pencarian Spesifik -->
@@ -384,7 +384,7 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20261127063315"></script>
+<script type="module" src="app.js?v=20261127063715"></script>
 <script>
   // Unregister semua service worker yang aktif — SW bikin loop refresh
   if ('serviceWorker' in navigator) {

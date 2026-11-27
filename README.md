@@ -12,16 +12,15 @@ npx vercel dev --listen 3000
 
 Open `http://localhost:3000`. To preview only the static UI, serve the `public/` directory; Vercel API routes will not work on a plain static server.
 
-## SPX snapshot mode
+## SPX live tracking and date search
 
-Select **SPX** in the carrier switcher. For date/time search, load:
+Select **SPX** in the carrier switcher. Enter known SPX AWBs in **NOMOR RESI** to track them live and filter their tracking history by date/time. A candidate file is optional; it can also supply AWBs for date/month search:
 
-- a candidate file such as `valid_spx.jsonl` or `candidates.json`;
+- optionally, a candidate file such as `valid_spx.jsonl` or `candidates.json`;
 - enter a date (`YYYY-MM-DD`) or month (`YYYY-MM`), and optionally a time (`HH:mm` or `HH:mm-HH:mm`);
-- press **Lacak** in the specific-search section. Candidate AWBs are filtered by their recorded date/time and checked against live SPX tracking history when available.
+- press **Lacak** in the specific-search section. The app checks live SPX tracking history and filters results by the requested date/time.
 
-Alternatively, paste known AWB numbers and use the batch-tracking button. Snapshot JSON files can still be loaded for offline result matching.
-The date/month search is limited to AWBs present in the selected candidate file; it does not generate unknown SPX numbers. If an event is older than the history returned by SPX, the search uses the candidate's recorded timestamp. SPX timestamps are compared in WIB.
+Snapshot JSON files can still be loaded for offline result matching. SPX's tracking endpoint requires a known AWB, so date/time search cannot discover unknown AWB numbers. SPX timestamps are compared in WIB.
 
 ## Vercel deployment
 

@@ -40,6 +40,10 @@ if (fs.existsSync(appJsPath)) {
     /from\s+["']\.\/guest\.js(?:\?[^"']*)?["']/g,
     `from "./guest.js?v=${buildId}"`
   );
+  appContent = appContent.replace(
+    /from\s+["']\.\/spx-data\.js(?:\?[^"']*)?["']/g,
+    `from "./spx-data.js?v=${buildId}"`
+  );
   fs.writeFileSync(appJsPath, appContent, 'utf8');
-  console.log(`Updated app.js auth import with cache-busting ?v=${buildId}`);
+  console.log(`Updated app.js module imports with cache-busting ?v=${buildId}`);
 }
