@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# local env & secrets
+.env
+.env.local
+.env.*.local
+
+# vercel
+.vercel/
+
+# Windows build of the desktop tool (85 MB, not needed for the web deploy)
+AWB Tool (SPX) By RB/
+
+# real customer/AWB snapshots — personal data, never commit
+web/data/
+
+# local upload staging
+incoming/
+
+# logs & OS junk
+*.log
+.DS_Store

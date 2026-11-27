@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiCepat Jinxpro — AWB Tracker</title>
+  <link rel="icon" href="New-AWB.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20261127061032">
+  <link rel="stylesheet" href="carrier.css">
+
+  <!-- ========================================== -->
+  <!-- CSS KHUSUS SCI-FI HUD LOADING SCREEN      -->
+  <!-- ========================================== -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600&display=swap');
+
+    body.hud-is-loading { overflow: hidden !important; }
+
+    #hud-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #02040a;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
+      background-size: 30px 30px;
+      color: white; font-family: 'Share Tech Mono', monospace;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 999999; cursor: default;
+      transition: opacity 1s ease-in-out;
+    }
+    #hud-overlay .hud-corner { position: absolute; width: 40px; height: 40px; border: 2px solid #00e5ff; opacity: 0.3; }
+    #hud-overlay .corner-tl { top: 30px; left: 30px; border-right: none; border-bottom: none; }
+    #hud-overlay .corner-tr { top: 30px; right: 30px; border-left: none; border-bottom: none; }
+    #hud-overlay .corner-bl { bottom: 30px; left: 30px; border-right: none; border-top: none; }
+    #hud-overlay .corner-br { bottom: 30px; right: 30px; border-left: none; border-top: none; }
+
+    #hud-overlay .hud-container { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 900px; z-index: 10; }
+    #hud-overlay .brand-header { position: absolute; top: -150px; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
+    #hud-overlay .custom-logo { height: 55px; width: auto; margin-bottom: 15px; }
+    #hud-overlay .brand-title { font-family: 'Inter', sans-serif; font-size: 32px; font-weight: bold; letter-spacing: 3px; margin: 0; text-transform: uppercase; line-height: 1; }
+    #hud-overlay .brand-title .white-text { color: #fff; }
+    #hud-overlay .brand-title .cyan-text { color: #00e5ff; }
+    #hud-overlay .brand-sub { font-size: 12px; color: #00e5ff; letter-spacing: 5px; margin-top: 10px; opacity: 0.9; }
+
+    #hud-overlay .core-reactor { position: relative; width: 350px; height: 350px; display: flex; justify-content: center; align-items: center; }
+    #hud-overlay .ring-1 { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 1px solid rgba(0,229,255,0.3); border-left: 2px solid #00e5ff; border-right: 2px solid #00e5ff; animation: hud-rotate-slow 10s linear infinite; }
+    #hud-overlay .ring-2 { position: absolute; width: 85%; height: 85%; border-radius: 50%; border: 4px dashed rgba(0,229,255,0.3); border-top: 4px solid #00e5ff; border-bottom: 4px solid #00e5ff; animation: hud-rotate-fast-rev 6s linear infinite; }
+    #hud-overlay .ring-3 { position: absolute; width: 70%; height: 70%; border-radius: 50%; border: 2px solid #00e5ff; border-left-color: transparent; border-right-color: transparent; animation: hud-rotate-med 4s linear infinite; }
+
+    #hud-overlay .center-display { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; }
+    #hud-overlay .perc-number { font-family: 'Rajdhani', sans-serif; font-size: 70px; font-weight: 500; color: transparent; -webkit-text-stroke: 1px #00e5ff; line-height: 1; margin-bottom: 5px; }
+    #hud-overlay .perc-label { font-size: 10px; color: #00e5ff; letter-spacing: 3px; }
+
+    #hud-overlay .side-panel { position: absolute; top: 50%; transform: translateY(-50%); width: 220px; background: rgba(0,229,255,0.03); border: 1px solid rgba(0,229,255,0.3); padding: 15px; box-sizing: border-box; backdrop-filter: blur(4px); }
+    #hud-overlay .panel-left { left: -280px; border-right: 3px solid #00e5ff; text-align: right; }
+    #hud-overlay .panel-right { right: -280px; border-left: 3px solid #00e5ff; text-align: left; }
+    #hud-overlay .panel-left::after { content: ''; position: absolute; right: -60px; top: 50%; width: 60px; height: 1px; background: rgba(0,229,255,0.3); }
+    #hud-overlay .panel-right::before { content: ''; position: absolute; left: -60px; top: 50%; width: 60px; height: 1px; background: rgba(0,229,255,0.3); }
+
+    #hud-overlay .panel-title { color: #fff; font-size: 12px; margin: 0 0 10px 0; letter-spacing: 2px; border-bottom: 1px solid rgba(0,229,255,0.3); padding-bottom: 5px; }
+    #hud-overlay .panel-data { color: #00e5ff; font-size: 10px; margin: 5px 0; letter-spacing: 1px; font-family: monospace; }
+    #hud-overlay .data-highlight { color: #fff; font-weight: bold; }
+
+    #hud-overlay .progress-track { position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%); width: 350px; height: 10px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 5px rgba(0,229,255,0.1); }
+    #hud-overlay .progress-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 0.1s linear; box-shadow: 0 0 10px rgba(0,229,255,0.15); background: repeating-linear-gradient(45deg, rgba(0,229,255,0.4), rgba(0,229,255,0.4) 10px, rgba(0,229,255,0.05) 10px, rgba(0,229,255,0.05) 20px); background-size: 28px 28px; animation: hud-stripes 1s linear infinite; }
+    
+    @keyframes hud-stripes { 0% { background-position: 0 0; } 100% { background-position: 28px 0; } }
+    @keyframes hud-rotate-slow { 100% { transform: rotate(360deg); } }
+    @keyframes hud-rotate-med { 100% { transform: rotate(360deg); } }
+    @keyframes hud-rotate-fast-rev { 100% { transform: rotate(-360deg); } }
+  </style>
+  <!-- ========================================== -->
+</head>
+<body class="hud-is-loading">
+
+
+<!-- ========================================== -->
+<!-- OVERLAY SCI-FI HUD (LAPISAN PALING ATAS)   -->
+<!-- ========================================== -->
+<div id="hud-overlay">
+    <div class="hud-corner corner-tl"></div>
+    <div class="hud-corner corner-tr"></div>
+    <div class="hud-corner corner-bl"></div>
+    <div class="hud-corner corner-br"></div>
+
+    <div class="hud-container">
+        <div class="brand-header">
+            <img src="New-AWB.png" alt="Logo SiCepat" class="custom-logo">
+            <h1 class="brand-title"><span class="white-text">SiCepat</span> <span class="cyan-text">Jinxpro</span></h1>
+            <div class="brand-sub">AUTOMATED AWB TRACKER · V2.1 WEB</div>
+        </div>
+
+        <div class="core-reactor">
+            <div class="ring-1"></div>
+            <div class="ring-2"></div>
+            <div class="ring-3"></div>
+            <div class="center-display">
+                <div class="perc-number" id="hud-percentage">0%</div>
+                <div class="perc-label" id="hud-center-label">BOOTING...</div>
+            </div>
+
+            <div class="side-panel panel-left">
+                <p class="panel-title">SYS_DIAGNOSTIC</p>
+                <p class="panel-data">MEMORY: <span class="data-highlight">OK</span></p>
+                <p class="panel-data">NETWORK: <span class="data-highlight" id="hud-net-status">CONNECTING</span></p>
+                <p class="panel-data">DB_SYNC: <span class="data-highlight" id="hud-db-status">PENDING</span></p>
+            </div>
+
+            <div class="side-panel panel-right">
+                <p class="panel-title">PROCESS_LOG</p>
+                <p class="panel-data" id="hud-log-1">> INITIALIZING_</p>
+                <p class="panel-data" id="hud-log-2">> WAITING_</p>
+                <p class="panel-data" id="hud-log-3">> ...</p>
+            </div>
+
+            <div class="progress-track">
+                <div class="progress-fill" id="hud-progress-fill"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ========================================== -->
+
+<!-- ═══ SPLASH / LOADING SCREEN ═══ -->
+<div id="splashScreen" class="splash">
+  <div class="splash-bg">
+    <div class="splash-dotgrid"></div>
+    <div class="splash-glow"></div>
+    <div class="splash-corner splash-corner-tl"></div>
+    <div class="splash-corner splash-corner-tr"></div>
+    <div class="splash-corner splash-corner-bl"></div>
+    <div class="splash-corner splash-corner-br"></div>
+  </div>
+  <div class="splash-content">
+    <!-- Beacon / Logo -->
+    <div class="splash-logo">
+      <svg class="splash-ring-outer" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#157e93" stroke-width="1" stroke-dasharray="1,6"/>
+      </svg>
+      <svg class="splash-ring-inner" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="34" fill="none" stroke="#35d7f0" stroke-width="1.2" stroke-dasharray="10,5" opacity="0.55"/>
+      </svg>
+      <div class="splash-orbit">
+        <div class="splash-orbit-dot"></div>
+      </div>
+      <img class="splash-logo-icon" src="New-AWB.png" alt="SiCepat Jinxpro">
+    </div>
+    <!-- Wordmark -->
+    <div class="splash-wordmark">SICEPAT JINXPRO</div>
+    <div class="splash-subtitle">- AUTOMATED AWB TRACKER V2.1 -</div>
+    <!-- Status -->
+    <div class="splash-status-row">
+      <span class="splash-status-text" id="splashStatus">MENYIAPKAN</span>
+      <span class="splash-percent" id="splashPercent">0%</span>
+    </div>
+    <div class="splash-segbar" id="splashSegbar"></div>
+    <!-- Footer -->
+    <div class="splash-footer">v2.1.0 WEB &nbsp;•&nbsp; build 2026.11.27 06:10</div>
+  </div>
+</div>
+
+<!-- ═══ TOPBAR ═══ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <img class="topbar-logo" src="New-AWB.png" alt="SiCepat Jinxpro">
+    <span id="appTitle" class="app-title">SiCepat Jinxpro</span>
+    <span class="app-badge">AUTOMATED AWB TRACKER · V2.1 WEB</span>
+    <div class="carrier-switcher" role="group" aria-label="Pilih kurir">
+      <button class="carrier-option active" type="button" data-carrier="sicepat">SiCepat</button>
+      <button class="carrier-option" type="button" data-carrier="spx">SPX</button>
+    </div>
+
+  </div>
+  <div class="topbar-right">
+
+    <span id="licenseBadge" class="license-badge">⏳ ...</span>
+    <button id="btnReset" class="btn-icon" title="Reset">↻</button>
+    <button id="btnSettings" class="btn-icon" title="Settings">⚙</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN 3-COLUMN ═══ -->
+<div class="main-grid">
+
+  <!-- ═══ LEFT SIDEBAR ═══ -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-scroll">
+
+      <!-- Group 1: Tracking -->
+      <div class="sidebar-group">
+        <div class="group-header">
+          <div class="group-dot"></div>
+          <span class="group-label">TRACKING</span>
+          <button id="musicToggle" class="music-toggle-btn" title="Music Player">🎵</button>
+        </div>
+        <label class="field-label">NOMOR RESI</label>
+        <textarea id="txtAwb" class="field-input textarea" rows="4" placeholder="004612348765&#10;004612348766"></textarea>
+        <p class="field-hint">Masukkan 1+ nomor resi per baris untuk search batch</p>
+        <button id="btnTrack" class="btn-primary" style="margin-top:12px;">Lacak</button>
+      </div>
+
+      <div id="spxDataGroup" class="sidebar-group hidden">
+        <div class="group-header">
+          <div class="group-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan-glow);"></div>
+          <span class="group-label">DATA SNAPSHOT SPX</span>
+        </div>
+        <label class="field-label" for="spxCandidatesFile">DAFTAR RESI VALID</label>
+        <input id="spxCandidatesFile" class="spx-file-input" type="file" accept=".json,.jsonl,.ndjson">
+        <p id="spxCandidatesInfo" class="field-hint">Pilih valid_spx.jsonl atau candidates.json</p>
+        <label class="field-label" for="spxTrackingFiles">HASIL TRACKING</label>
+        <input id="spxTrackingFiles" class="spx-file-input" type="file" accept=".json,application/json" multiple>
+        <p id="spxTrackingInfo" class="field-hint">Pilih hasil_match_spx.json atau file status JSON.</p>
+        <p class="spx-local-note">Mode SPX saat ini mencocokkan snapshot yang dipilih, bukan tracking live.</p>
+      </div>
+
+      <!-- Group 2: Pencarian Spesifik -->
+      <div id="specificSearchGroup" class="sidebar-group">
+        <div class="group-header">
+          <div class="group-dot" style="background:var(--amber);box-shadow:0 0 6px var(--amber-glow);"></div>
+          <span class="group-label">PENCARIAN SPESIFIK</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-col">
+            <label class="field-label">JAM</label>
+            <input id="txtJam" type="text" class="field-input" placeholder="11:00-13:00" title="HH:mm atau HH:mm-HH:mm">
+            <p class="field-hint">contoh: 11:00-13:00</p>
+          </div>
+          <div class="field-col">
+            <label class="field-label">TANGGAL</label>
+            <input id="txtTanggal" type="text" class="field-input" placeholder="2026-07-11" title="YYYY-MM-DD">
+            <p class="field-hint">contoh: 2026-07-11</p>
+          </div>
+        </div>
+
+        <label class="field-label">KOTA TUJUAN</label>
+        <input id="txtKota" type="text" class="field-input" placeholder="Misal: Jakarta Barat" title="Ketik nama kota target" list="kotaList" autocomplete="off">
+        <datalist id="kotaList"></datalist>
+        <p class="field-hint">contoh: Jakarta Barat</p>
+
+        <div style="margin-top:10px;">
+          <label class="toggle-row">
+            <span class="toggle-label">SEMBUNYIKAN KOLOM AWB</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkHideAwbColumn">
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-label">URUTKAN DARI JAM TERMUDA</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkSortByTime">
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-label">HANYA RESI BARU CETAK</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkNewPrintOnly" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-label">REALTIME AGGRESSIVE</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkRealtimeAggr">
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+        </div>
+
+        <button id="btnTrackSearch" class="btn-primary" style="margin-top:10px;">🔍 Lacak</button>
+        <button id="btnPause" class="btn-primary hidden" style="margin-top:6px;">⏸ Pause</button>
+        <div class="btn-row hidden" id="btnScanRow">
+          <button id="btnStop" class="btn-secondary">⏹ Stop</button>
+          <button id="btnNext" class="btn-secondary">⏭ Next</button>
+        </div>
+        <button id="btnExport" class="btn-secondary" style="margin-top:6px;">📥 Download Excel</button>
+      </div>
+
+
+    </div>
+
+    <!-- Sidebar footer -->
+    <div class="sidebar-footer">
+      <p class="powered-by">Powered by Jinxpro</p>
+      <div class="social-links">
+        <a href="https://x.com/SizeCad" target="_blank" class="social-link social-x" title="X / Twitter">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://t.me/Muskzillaa" target="_blank" class="social-link social-telegram" title="Telegram">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.015-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        </a>
+        <a href="https://wa.me/6288229143977" target="_blank" class="social-link social-wa" title="WhatsApp">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="content">
+    <div class="content-header">
+      <h2 class="content-title"><span class="title-dot"></span>HASIL MATCH AWB</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">TOTAL RESI</div>
+          <span class="stat-value" id="txtTotalResi">0</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">BERHASIL</div>
+          <span class="stat-value" id="txtBerhasil">0</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">DIPINDAI</div>
+          <span class="stat-value" id="txtDipindai">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-scroll" id="resultsScroll">
+      <div id="icResults"></div>
+      <div id="txtNoResults" class="no-results">Belum ada AWB yang ditrack. Masukkan nomor resi untuk memulai.</div>
+    </div>
+  </main>
+
+  <!-- ═══ ACTIVITY LOG ═══ -->
+  <aside class="log-panel">
+    <div class="log-header">
+      <div class="log-title-row">
+        <div class="log-dots">
+          <span class="log-dot log-dot-red"></span>
+          <span class="log-dot log-dot-yellow"></span>
+          <span class="log-dot log-dot-green"></span>
+        </div>
+        <span class="log-title">ACTIVITY LOG</span>
+        <div class="log-actions">
+          <button id="btnClearLog" class="log-action-btn" title="Clear Log">🗑</button>
+          <button id="btnMinimalLog" class="log-action-btn" title="Minimal Mode (hanya Match/Error)">📋</button>
+        </div>
+      </div>
+      <p class="log-subtitle" id="logSubtitle">Realtime output proses AWB</p>
+    </div>
+    <div class="log-body" id="logBody">
+      <div class="log-line" style="color:#7c808a">Siap untuk melacak...</div>
+    </div>
+  </aside>
+
+</div>
+
+
+
+<!-- ═══ SETTINGS MODAL ═══ -->
+<div id="settingsModal" class="modal hidden">
+  <div class="modal-content">
+    <h3 class="modal-title">⚙ Pengaturan</h3>
+    <hr class="section-divider">
+    <label class="field-label">THEME</label>
+    <div class="segmented-control" id="themeSelector">
+      <button class="seg-btn" data-theme="Dark">Dark</button>
+      <button class="seg-btn" data-theme="White">White</button>
+      <button class="seg-btn" data-theme="Light">Light</button>
+      <button class="seg-btn active" data-theme="JINX">JINX</button>
+    </div>
+    <label class="field-label">SPEED MULTIPLIER</label>
+    <div class="segmented-control" id="speedSelector">
+      <button class="seg-btn active" data-speed="2">x2</button>
+      <button class="seg-btn" data-speed="4">x4</button>
+      <button class="seg-btn" data-speed="6">x6</button>
+      <button class="seg-btn" data-speed="8">x8</button>
+    </div>
+    <hr class="section-divider">
+    <label class="field-label">EXPORT MODEL (UPDATE SEED)</label>
+    <button id="btnExportModel" class="btn-secondary" style="width:100%;margin-bottom:10px;">📥 Download Model JSON</button>
+    <div class="modal-buttons">
+      <button id="btnSettingsSave" class="btn-primary">Simpan</button>
+      <button id="btnSettingsCancel" class="btn-secondary">Batal</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="app.js?v=20261127061032"></script>
+<script>
+  // Unregister semua service worker yang aktif — SW bikin loop refresh
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      for (const reg of registrations) reg.unregister();
+    });
+    // Hapus semua cache
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+  }
+
+  // Fallback: jangan biarkan overlay loading menutupi aplikasi selamanya.
+  window.setTimeout(() => {
+    document.getElementById("splashScreen")?.remove();
+    const hud = document.getElementById("hud-overlay");
+    if (hud) hud.remove();
+    document.body.classList.remove("hud-is-loading");
+  }, 6500);
+</script>
+
+<!-- ========================================== -->
+<!-- SCRIPT KHUSUS ANIMASI HUD LOADING SCREEN   -->
+<!-- ========================================== -->
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+      const percText = document.getElementById('hud-percentage');
+      const centerLabel = document.getElementById('hud-center-label');
+      const netStatus = document.getElementById('hud-net-status');
+      const dbStatus = document.getElementById('hud-db-status');
+      const log1 = document.getElementById('hud-log-1');
+      const log2 = document.getElementById('hud-log-2');
+      const log3 = document.getElementById('hud-log-3');
+      const progressFill = document.getElementById('hud-progress-fill');
+
+      const DURATION = 5000;
+      const startTime = performance.now();
+
+      const stages = [
+          { at: 0,  c: "BOOTING...",       net: "SECURE",    db: "PENDING",   l1: "> KERNEL_LOADED",    l2: "> WAITING_",         l3: "> ..." },
+          { at: 10, c: "INITIALIZING...",   net: "CONNECTING", db: "PENDING",  l1: "> KERNEL_LOADED",    l2: "> INIT_SYSTEMS...",  l3: "> ..." },
+          { at: 25, c: "SYNCING...",        net: "CONNECTED", db: "FETCHING",  l1: "> SYNC_AWB_DB...",   l2: "> LOADING_ML...",    l3: "> ..." },
+          { at: 45, c: "BUILDING UI",       net: "CONNECTED", db: "UPDATED",   l1: "> ML_ENGINE_READY",  l2: "> MOUNTING_UI...",   l3: "> ASSETS_READY" },
+          { at: 65, c: "LOADING DATA",      net: "STABLE",    db: "UPDATED",   l1: "> MOUNTING_UI...",   l2: "> CHECKING_VARS",    l3: "> ASSETS_CACHED" },
+          { at: 80, c: "FINAL CHECK",       net: "STABLE",    db: "VERIFIED",  l1: "> CHECKING_VARS",    l2: "> VERIFY_AUTH...",    l3: "> ALMOST_DONE" },
+          { at: 95, c: "SYSTEM READY",      net: "ONLINE",    db: "ACTIVE",    l1: "> ALL_SYSTEMS_GO",   l2: "> READY_TO_TRACK",   l3: "> STANDBY_" }
+      ];
+
+      function tick() {
+          const elapsed = performance.now() - startTime;
+          const progress = Math.min(1.0, elapsed / DURATION);
+          const pct = Math.floor(progress * 100);
+
+          percText.innerText = pct + '%';
+          if (progressFill) progressFill.style.width = pct + '%';
+
+          for (let i = stages.length - 1; i >= 0; i--) {
+              if (pct >= stages[i].at) {
+                  centerLabel.innerText = stages[i].c;
+                  netStatus.innerText = stages[i].net;
+                  dbStatus.innerText = stages[i].db;
+                  log1.innerText = stages[i].l1;
+                  log2.innerText = stages[i].l2;
+                  log3.innerText = stages[i].l3;
+                  break;
+              }
+          }
+
+          if (progress < 1.0) {
+              requestAnimationFrame(tick);
+          } else {
+              percText.innerText = '100%';
+              centerLabel.innerText = 'SYSTEM READY';
+              netStatus.innerText = 'ONLINE';
+              dbStatus.innerText = 'ACTIVE';
+              log1.innerText = '> ALL_SYSTEMS_GO';
+              log2.innerText = '> READY_TO_TRACK';
+              log3.innerText = '> STANDBY_';
+              if (progressFill) progressFill.style.width = '100%';
+
+              setTimeout(() => {
+                  const overlay = document.getElementById('hud-overlay');
+                  overlay.style.pointerEvents = 'none';
+                  overlay.style.opacity = '0';
+                  setTimeout(() => {
+                      overlay.style.display = 'none';
+                      document.body.classList.remove('hud-is-loading');
+                  }, 1000);
+              }, 500);
+          }
+      }
+
+      requestAnimationFrame(tick);
+  });
+</script>
+
+<!-- ═══ Music Popup (floating, draggable) ═══ -->
+<div id="musicPopup" class="music-popup">
+  <canvas id="musicVizCanvas" class="music-viz-canvas"></canvas>
+  <div id="musicDragHandle" class="music-popup-header">
+    <span id="musicNowPlaying" class="music-popup-title">-</span>
+    <button id="musicClose" class="music-popup-close">✕</button>
+  </div>
+  <div class="music-popup-body">
+    <div class="music-progress-wrap">
+      <input id="musicProgress" type="range" class="music-progress" min="0" max="1000" value="0">
+      <span id="musicTime" class="music-time">0:00 / 0:00</span>
+    </div>
+    <div class="music-controls">
+      <button id="musicPrev" class="music-ctrl" title="Previous">⏮</button>
+      <button id="musicPlay" class="music-ctrl" title="Play/Pause">▶</button>
+      <button id="musicStop" class="music-ctrl" title="Stop">⏹</button>
+      <button id="musicNext" class="music-ctrl" title="Next">⏭</button>
+      <button id="musicRepeat" class="music-ctrl" title="Repeat">⟲</button>
+    </div>
+    <div class="music-volume-wrap">
+      <span class="music-volume-icon" id="musicMuteIcon">🔊</span>
+      <input id="musicVolume" type="range" class="music-volume" min="0" max="100" value="80">
+      <span id="musicVolumePct" class="music-volume-pct">80%</span>
+    </div>
+    <select id="musicPlaylist" class="music-playlist">
+      <option value="">▼ Pilih Lagu</option>
+    </select>
+  </div>
+</div>
+
+</body>
+</html>
