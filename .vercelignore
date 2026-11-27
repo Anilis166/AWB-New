@@ -1,9 +1,9 @@
 AWB Tool (SPX) By RB/
 web/data/
 incoming/
-upload-awb.sh
-app.test.js
-app.js
-index.html
-styles.css
-spx-data.test.js
+/upload-awb.sh
+/app.test.js
+/app.js
+/index.html
+/styles.css
+/spx-data.test.js
