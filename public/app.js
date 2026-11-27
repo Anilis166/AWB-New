@@ -11,9 +11,10 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { initAuth, getAuthUser, logout } from "./auth.js?v=20261127061032";
+import { initAuth, getAuthUser, logout } from "./auth.js?v=20261127062452";
 import {
   buildSpxResult,
+  filterSpxCandidates,
   normalizeResi,
   parseSpxCandidates,
   parseSpxTracking,
@@ -395,14 +396,15 @@ function setCarrierMode(courier) {
   document.querySelectorAll(".carrier-option").forEach((button) => {
     button.classList.toggle("active", button.dataset.carrier === courier);
   });
-  document.getElementById("specificSearchGroup").classList.toggle("hidden", isSpx);
+  document.getElementById("specificSearchGroup").classList.remove("hidden");
   document.getElementById("spxDataGroup").classList.toggle("hidden", !isSpx);
-  document.getElementById("btnTrackSearch").classList.toggle("hidden", isSpx);
+  document.getElementById("btnTrackSearch").classList.remove("hidden");
   document.getElementById("appTitle").textContent = isSpx ? "AWB Tracker · SPX" : "SiCepat Jinxpro";
+  document.getElementById("txtTanggal").placeholder = isSpx ? "2026-11-20 atau 2026-11" : "2026-07-11";
   document.getElementById("txtAwb").placeholder = isSpx
     ? "Tempel satu atau beberapa nomor resi SPX"
     : "004612348765\n004612348766";
-  log(`Kurir aktif: ${isSpx ? "SPX (snapshot lokal)" : "SiCepat"}.`, "system");
+  log(`Kurir aktif: ${isSpx ? "SPX (pencarian tanggal/jam dari kandidat)" : "SiCepat"}.`, "system");
 }
 
 async function loadSpxCandidates(event) {
@@ -483,6 +485,168 @@ async function trackSpxBatch(awbList) {
   log(`Pelacakan SPX selesai: ${results.length} resi.`, "success");
 }
 
+async function trackSpxSearch(targetDate, jam, timeRange, kota) {
+  const candidates = filterSpxCandidates(spxCandidates, targetDate, timeRange);
+  if (candidates.length === 0) {
+    log(`Tidak ada kandidat SPX pada ${targetDate}${jam ? ` jam ${jam}` : ""}. Periksa rentang tanggal/jam atau file kandidat.`, "warning");
+    return;
+  }
+
+  setButtonsDisabled(true);
+  document.getElementById("btnStop").classList.remove("hidden");
+  document.getElementById("btnPause").classList.add("hidden");
+  const controller = new AbortController();
+  cts = {
+    cancelled: false,
+    signal: controller.signal,
+    abort() {
+      this.cancelled = true;
+      controller.abort();
+    },
+  };
+  results = [];
+  startTime = Date.now();
+  log(`=== PENCARIAN SPX: TANGGAL/BULAN + JAM ===`, "system");
+  log(`Target=${targetDate} | Jam=${jam || "semua"} | Kandidat=${candidates.length}${kota ? ` | Kota=${kota}` : ""}`, "info");
+
+  let nextIndex = 0;
+  let checked = 0;
+  let errors = 0;
+  const worker = async () => {
+    while (!cts.cancelled) {
+      const index = nextIndex++;
+      if (index >= candidates.length) return;
+      const candidate = candidates[index];
+      const candidateNumber = normalizeResi(candidate.resi);
+      const awb = candidateNumber.startsWith("SPXID")
+        ? candidateNumber
+        : `SPXID${candidateNumber.replace(/B$/, "")}B`;
+      try {
+        const response = await fetch(`/api/spx-track?awb=${encodeURIComponent(awb)}`, {
+          signal: cts.signal,
+        });
+        const payload = await response.json();
+        checked++;
+        const entry = response.ok && payload?.ok
+          ? payload.result
+          : spxTracking.get(normalizeResi(awb)) ||
+            spxTracking.get(candidateNumber) || {
+              resi: awb,
+              waybill_id: awb,
+              latest_status: "Belum ada status live",
+              latest_checkpoint_date: candidate.date,
+              latest_note: "Waktu dari data kandidat SPX",
+              records: [],
+            };
+        if (entry) {
+          const matchedEvent = (entry.records || []).find((record) => {
+            const timestamp = record.actual_time
+              ? parseSpxDate(record.actual_time)
+              : new Date(Number(record.timestamp) * 1000);
+            if (Number.isNaN(timestamp.getTime())) return false;
+            const eventDateTime = formatSpxDateTime(timestamp);
+            const eventDate = eventDateTime.date;
+            const [eventHour, eventMinute] = eventDateTime.time.split(":").map(Number);
+            const eventMinutes = eventHour * 60 + eventMinute;
+            const dateMatches = eventDate.startsWith(targetDate);
+            const timeMatches = !timeRange || (eventMinutes >= timeRange.start && eventMinutes <= timeRange.end);
+            const eventText = record.message || record.description || "";
+            const cityMatches = !kota || matchDestination(eventText, kota);
+            return dateMatches && timeMatches && cityMatches;
+          }) || (!kota || matchDestination(entry.latest_note || "", kota) ? {
+            actual_time: parseSpxDate(candidate.date).toISOString(),
+            status: entry.latest_status || "Belum ada status live",
+            message: entry.latest_note || "Waktu dari data kandidat SPX",
+          } : null);
+
+          if (matchedEvent) {
+            const tracking = new Map([[normalizeResi(awb), entry]]);
+            const result = buildSpxResult(awb, spxCandidates, tracking);
+            const matchedDate = parseSpxDate(matchedEvent.actual_time || Number(matchedEvent.timestamp) * 1000);
+            const matchedDateTime = formatSpxDateTime(matchedDate);
+            result.tanggal = matchedDateTime.date;
+            result.jam = matchedDateTime.time;
+            result.lastUpdate = `${result.tanggal} ${result.jam}`;
+            result.status = matchedEvent.status || result.status;
+            result.receiver = matchedEvent.message || result.receiver;
+            results.push(result);
+            renderResults();
+            log(`✓ ${awb} — ${result.tanggal} ${result.jam} — ${result.status}`, "success");
+          }
+        }
+        if (!response.ok && response.status !== 404) {
+          errors++;
+          if (errors <= 5) log(`Gagal cek ${awb}: ${payload?.error || `HTTP ${response.status}`}`, "warning");
+        }
+      } catch (error) {
+        if (cts.cancelled) return;
+        errors++;
+        if (errors <= 5) log(`Gagal cek ${awb}: ${error.message}`, "warning");
+        if (!kota) {
+          const entry = spxTracking.get(normalizeResi(awb)) ||
+            spxTracking.get(candidateNumber) || {
+              resi: awb,
+              waybill_id: awb,
+              latest_status: "Belum ada status live",
+              latest_checkpoint_date: candidate.date,
+              latest_note: "Waktu dari data kandidat SPX",
+              records: [],
+            };
+          const result = buildSpxResult(awb, spxCandidates, new Map([[normalizeResi(awb), entry]]));
+          const candidateDateTime = formatSpxDateTime(parseSpxDate(candidate.date));
+          result.tanggal = candidateDateTime.date;
+          result.jam = candidateDateTime.time;
+          result.lastUpdate = `${result.tanggal} ${result.jam}`;
+          results.push(result);
+          renderResults();
+        }
+      }
+
+      if (checked > 0 && checked % 25 === 0) {
+        log(`SPX dipindai ${checked}/${candidates.length} | cocok=${results.length} | gagal=${errors}`, "info");
+        updateStats(new Date(Date.now() - startTime), checked);
+      }
+    }
+  };
+
+  try {
+    await Promise.all(Array.from({ length: Math.min(4, candidates.length) }, worker));
+    renderResultsNow();
+    updateStats(new Date(Date.now() - startTime), checked);
+    log(cts.cancelled
+      ? `Pencarian SPX dihentikan. Dipindai ${checked}, cocok ${results.length}.`
+      : `Pencarian SPX selesai. Dipindai ${checked}, cocok ${results.length}.`, cts.cancelled ? "warning" : "success");
+  } finally {
+    cts = null;
+    setButtonsDisabled(false);
+    document.getElementById("btnStop").classList.add("hidden");
+  }
+}
+
+function parseSpxDate(value) {
+  if (typeof value === "number") return new Date(value * 1000);
+  const date = String(value ?? "");
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(date);
+  return new Date(!hasTimezone && /^\d{4}-\d{2}-\d{2}T/.test(date) ? `${date}+07:00` : date);
+}
+
+function formatSpxDateTime(date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (type) => parts.find((value) => value.type === type)?.value || "";
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    time: `${part("hour")}:${part("minute")}`,
+  };
+}
+
 // ═══════════════════════════════════════════════════════
 // MODE 1: BATCH TRACKING (BtnTrack)
 // ═══════════════════════════════════════════════════════
@@ -545,14 +709,27 @@ async function btnTrackClick() {
 // MODE 2: SEARCH BY DATE/TIME/CITY (BtnTrackSearch)
 // ═══════════════════════════════════════════════════════
 async function btnTrackSearchClick() {
-  if (COURIER !== "sicepat") {
-    log("Pencarian spesifik saat ini hanya tersedia untuk SiCepat.", "warning");
-    return;
-  }
-
   const jam = document.getElementById("txtJam").value.trim();
   const tgl = document.getElementById("txtTanggal").value.trim();
   const kota = document.getElementById("txtKota").value.trim();
+
+  if (COURIER === "spx") {
+    const timeRange = parseTimeRange(jam);
+    if (!/^\d{4}-\d{2}(?:-\d{2})?$/.test(tgl)) {
+      log("Untuk SPX, tanggal wajib format YYYY-MM-DD atau bulan YYYY-MM. Contoh: 2026-11-20 atau 2026-11.", "warning");
+      return;
+    }
+    if (jam && !timeRange) {
+      log("Format jam harus HH:mm atau HH:mm-HH:mm. Contoh: 11:00-13:00", "warning");
+      return;
+    }
+    if (spxCandidates.size === 0) {
+      log("Pilih file daftar resi valid SPX terlebih dahulu pada DATA SNAPSHOT SPX.", "warning");
+      return;
+    }
+    await trackSpxSearch(tgl, jam, timeRange, kota);
+    return;
+  }
 
   if (!tgl || !/^\d{4}-\d{2}-\d{2}$/.test(tgl)) {
     log("Tanggal wajib format YYYY-MM-DD. Contoh: 2026-07-11", "warning");

@@ -14,12 +14,14 @@ Open `http://localhost:3000`. To preview only the static UI, serve the `public/`
 
 ## SPX snapshot mode
 
-Select **SPX** in the carrier switcher, then load:
+Select **SPX** in the carrier switcher. For date/time search, load:
 
 - a candidate file such as `valid_spx.jsonl` or `candidates.json`;
-- one or more tracking-result JSON files such as `hasil_match_spx.json`.
+- enter a date (`YYYY-MM-DD`) or month (`YYYY-MM`), and optionally a time (`HH:mm` or `HH:mm-HH:mm`);
+- press **Lacak** in the specific-search section. Candidate AWBs are filtered by their recorded date/time and checked against live SPX tracking history when available.
 
-Paste AWB numbers and press **Lacak**. Matching runs in the browser. The uploaded snapshot files are not included in the Vercel deployment.
+Alternatively, paste known AWB numbers and use the batch-tracking button. Snapshot JSON files can still be loaded for offline result matching.
+The date/month search is limited to AWBs present in the selected candidate file; it does not generate unknown SPX numbers. If an event is older than the history returned by SPX, the search uses the candidate's recorded timestamp. SPX timestamps are compared in WIB.
 
 ## Vercel deployment
 

@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildSpxResult, parseSpxCandidates, parseSpxTracking } from "./public/spx-data.js";
+import {
+  buildSpxResult,
+  filterSpxCandidates,
+  parseSpxCandidates,
+  parseSpxTracking,
+} from "./public/spx-data.js";
 
 test("parses and deduplicates SPX candidate JSONL case-insensitively", () => {
   const candidates = parseSpxCandidates(
@@ -17,6 +22,27 @@ test("parses the candidate JSON array format", () => {
 
 test("reports the line number for malformed candidate JSONL", () => {
   assert.throws(() => parseSpxCandidates('{"resi":"SPX-01"}\ninvalid'), /baris 2/);
+});
+
+test("filters SPX candidates by exact date and time range", () => {
+  const candidates = parseSpxCandidates([
+    '{"resi":"SPX-01","date":"2026-11-20T10:59:00+07:00"}',
+    '{"resi":"SPX-02","date":"2026-11-20T11:30:00+07:00"}',
+    '{"resi":"SPX-03","date":"2026-11-21T11:30:00+07:00"}',
+  ].join("\n"));
+  const matching = filterSpxCandidates(candidates, "2026-11-20", { start: 660, end: 720 });
+  assert.deepEqual(matching.map((candidate) => candidate.resi), ["SPX-02"]);
+});
+
+test("filters SPX candidates by month when no time range is set", () => {
+  const candidates = parseSpxCandidates([
+    '{"resi":"SPX-01","date":"2026-11-20T10:59:00+07:00"}',
+    '{"resi":"SPX-02","date":"2026-12-01T11:30:00+07:00"}',
+  ].join("\n"));
+  assert.deepEqual(
+    filterSpxCandidates(candidates, "2026-11", null).map((candidate) => candidate.resi),
+    ["SPX-01"],
+  );
 });
 
 test("maps SPX tracking snapshots into the result-card format", () => {
