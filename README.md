@@ -1,6 +1,6 @@
 # AWB Tracker · SiCepat + SPX
 
-Vercel-ready web app based on the SiCepat AWB dashboard, with a second SPX mode. The **SiCepat** option keeps the live tracking/search workflow. The **SPX** option matches local candidate/status snapshots from files selected by the user; it does not call a live SPX tracking API.
+Vercel-ready web app based on the SiCepat AWB dashboard, with a second SPX mode. The **SiCepat** option keeps the live tracking/search workflow. The **SPX** option searches candidate AWBs and checks their status against the live SPX tracking API. The web app does not require an access code or login.
 
 ## Run locally
 

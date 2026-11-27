@@ -11,7 +11,7 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { initAuth, getAuthUser, logout } from "./auth.js?v=20261127062452";
+import { getGuestUser } from "./guest.js?v=20261127063315";
 import {
   buildSpxResult,
   filterSpxCandidates,
@@ -158,9 +158,8 @@ function sleep(ms) {
 // INIT
 // ═══════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", () => {
-  // Run splash immediately — independent of auth/ML loading
   runSplashSequence();
-  initAuth(initApp);
+  initApp();
 });
 
 async function initApp() {
@@ -171,9 +170,6 @@ async function initApp() {
   log(`Mesin ML dimuat: ${ml.history.length} data | ${Object.keys(ml.cityKdes).length} kota KDE | batas AREA=${ml.getAreaCeiling()}`, "system");
   populateKotaAutocomplete();
   checkProgressOnStartup();
-
-  // Update license badge with username
-  updateLicenseDisplay();
 
   // ── Keep-alive: prevent Vercel cold start ──
   // Ping API setiap 5 menit supaya function tetap warm
@@ -1737,7 +1733,7 @@ function deleteProgress() {
 
 async function syncProgressToRedis(data) {
   try {
-    const user = getAuthUser();
+    const user = getGuestUser();
     const uid = user?.username || "guest";
     const key = `progress:${uid}`;
     const value = data ? JSON.stringify(data) : "";
@@ -1751,7 +1747,7 @@ async function syncProgressToRedis(data) {
 
 async function loadProgressFromRedis() {
   try {
-    const user = getAuthUser();
+    const user = getGuestUser();
     const uid = user?.username || "guest";
     const key = `progress:${uid}`;
     const resp = await fetch("/api/redis", {
@@ -2096,25 +2092,6 @@ function flushLogQueue() {
   body.scrollTop = body.scrollHeight;
 
 
-}
-
-// ═══════════════════════════════════════════════════════
-// LICENSE (placeholder — web version has no HWID license)
-// ═══════════════════════════════════════════════════════
-function updateLicenseDisplay() {
-  const user = getAuthUser();
-  const el = document.getElementById("licenseBadge");
-  if (!el) return;
-  const name = user?.username || "Guest";
-  el.innerHTML = "<span class='account-dot'></span>" + name;
-  el.classList.add("account-badge");
-  el.title = "Klik untuk logout";
-  el.onclick = () => {
-    if (confirm("Logout dari " + name + "?")) {
-      logout();
-      location.reload();
-    }
-  };
 }
 
 // ═══════════════════════════════════════════════════════

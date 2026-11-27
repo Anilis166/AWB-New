@@ -37,8 +37,8 @@ const appJsPath = path.resolve('public/app.js');
 if (fs.existsSync(appJsPath)) {
   let appContent = fs.readFileSync(appJsPath, 'utf8');
   appContent = appContent.replace(
-    /from\s+["']\.\/auth\.js(?:\?[^"']*)?["']/g,
-    `from "./auth.js?v=${buildId}"`
+    /from\s+["']\.\/guest\.js(?:\?[^"']*)?["']/g,
+    `from "./guest.js?v=${buildId}"`
   );
   fs.writeFileSync(appJsPath, appContent, 'utf8');
   console.log(`Updated app.js auth import with cache-busting ?v=${buildId}`);
