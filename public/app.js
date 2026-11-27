@@ -11,13 +11,14 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { getGuestUser } from "./guest.js?v=20261127064003";
+import { getGuestUser } from "./guest.js?v=20261127064727";
 import {
   buildSpxResult,
   formatSpxAwb,
   normalizeResi,
+  parseSpxCandidateAwbs,
   parseSpxAwbList,
-} from "./spx-data.js?v=20261127064003";
+} from "./spx-data.js?v=20261127064727";
 
 // ── Constants ──
 const PREFIX = "0046";
@@ -394,6 +395,23 @@ function setCarrierMode(courier) {
   log(`Kurir aktif: ${isSpx ? "SPX (tracking live dengan filter tanggal/jam)" : "SiCepat"}.`, "system");
 }
 
+function selectSpxAwbFile() {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,.jsonl,.ndjson,text/plain,application/json";
+    input.hidden = true;
+    const finish = (file) => {
+      input.remove();
+      resolve(file);
+    };
+    input.addEventListener("change", () => finish(input.files?.[0] ?? null), { once: true });
+    input.addEventListener("cancel", () => finish(null), { once: true });
+    document.body.append(input);
+    input.click();
+  });
+}
+
 async function trackSpxBatch(awbList) {
   const button = document.getElementById("btnTrack");
   button.disabled = true;
@@ -430,8 +448,13 @@ async function trackSpxBatch(awbList) {
   log(`Pelacakan SPX selesai: ${results.length} resi.`, "success");
 }
 
-async function trackSpxSearch(targetDate, jam, timeRange, kota) {
-  const awbs = parseSpxAwbList(document.getElementById("txtAwb").value);
+async function trackSpxSearch(
+  targetDate,
+  jam,
+  timeRange,
+  kota,
+  awbs = parseSpxAwbList(document.getElementById("txtAwb").value),
+) {
   if (awbs.length === 0) {
     log("Masukkan nomor resi SPX di kolom NOMOR RESI terlebih dahulu. Pencarian tanggal/jam akan memeriksa riwayat live dari nomor tersebut.", "warning");
     return;
@@ -641,7 +664,26 @@ async function btnTrackSearchClick() {
       log("Format jam harus HH:mm atau HH:mm-HH:mm. Contoh: 11:00-13:00", "warning");
       return;
     }
-    await trackSpxSearch(tgl, jam, timeRange, kota);
+    let awbs = parseSpxAwbList(document.getElementById("txtAwb").value);
+    if (awbs.length === 0) {
+      const file = await selectSpxAwbFile();
+      if (!file) {
+        log("Pilih file daftar AWB SPX untuk memulai Scan.", "warning");
+        return;
+      }
+      try {
+        awbs = parseSpxCandidateAwbs(await file.text());
+      } catch (error) {
+        log(`File daftar AWB SPX tidak valid: ${error.message}`, "error");
+        return;
+      }
+      if (awbs.length === 0) {
+        log("File tidak berisi nomor AWB SPX yang dapat dibaca.", "warning");
+        return;
+      }
+      log(`Daftar lokal dimuat: ${awbs.length} AWB dari ${file.name}.`, "info");
+    }
+    await trackSpxSearch(tgl, jam, timeRange, kota, awbs);
     return;
   }
 

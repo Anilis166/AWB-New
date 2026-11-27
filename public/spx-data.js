@@ -9,6 +9,42 @@ export function parseSpxAwbList(value) {
   return [...awbs.values()];
 }
 
+export function parseSpxCandidateAwbs(text) {
+  const content = String(text ?? "").trim();
+  if (!content) return [];
+
+  let rows;
+  try {
+    const data = JSON.parse(content);
+    if (Array.isArray(data)) {
+      rows = data;
+    } else if (data && typeof data === "object") {
+      const candidates = data.candidates ?? data.records ?? data.valid;
+      rows = Array.isArray(candidates) ? candidates : [data];
+    } else {
+      throw new Error("Data harus berupa daftar AWB JSON atau JSONL.");
+    }
+  } catch (jsonError) {
+    rows = content.split(/\r?\n/).filter((line) => line.trim()).map((line, index) => {
+      try {
+        return JSON.parse(line);
+      } catch (lineError) {
+        const awb = line.trim();
+        if (/^[A-Za-z0-9-]+$/.test(awb)) return awb;
+        throw new Error(`Baris ${index + 1} tidak valid: ${lineError.message || jsonError.message}`);
+      }
+    });
+  }
+
+  const awbs = new Map();
+  for (const row of rows) {
+    const value = typeof row === "string" ? row : row?.resi ?? row?.waybill_id ?? row?.awb;
+    const resi = normalizeResi(value);
+    if (resi && !awbs.has(resi)) awbs.set(resi, resi);
+  }
+  return [...awbs.values()];
+}
+
 export function formatSpxAwb(value) {
   const resi = normalizeResi(value);
   if (!resi || resi.startsWith("SPXID")) return resi;

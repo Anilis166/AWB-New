@@ -14,7 +14,7 @@ Open `http://localhost:3000`. To preview only the static UI, serve the `public/`
 
 ## SPX live tracking and date search
 
-Select **SPX** in the carrier switcher. The tracking and search fields are the same as SiCepat. Enter known SPX AWBs in **NOMOR RESI** to track them live and filter their tracking history by date/time:
+Select **SPX** in the carrier switcher. The tracking and search fields are the same as SiCepat. Enter known SPX AWBs in **NOMOR RESI** to track them live. If the field is empty when you press **Scan**, choose a local AWB list such as `valid_spx.jsonl`; the file is read in the browser and is not published with the site.
 
 - enter a date (`YYYY-MM-DD`) or month (`YYYY-MM`), and optionally a time (`HH:mm` or `HH:mm-HH:mm`);
 - press **Lacak** in the specific-search section. The app checks live SPX tracking history and filters results by the requested date/time.

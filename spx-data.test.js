@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildSpxResult,
   formatSpxAwb,
+  parseSpxCandidateAwbs,
   parseSpxAwbList,
 } from "./public/spx-data.js";
 
@@ -15,6 +16,17 @@ test("parses known SPX AWBs from pasted lines and deduplicates them", () => {
 
 test("returns no AWBs for empty input", () => {
   assert.deepEqual(parseSpxAwbList(" \n\t "), []);
+});
+
+test("reads and deduplicates AWBs from JSONL and candidate JSON files", () => {
+  assert.deepEqual(
+    parseSpxCandidateAwbs('{"resi":"spxid001b","date":"2026-11-20"}\n{"awb":"SPXID001B"}'),
+    ["SPXID001B"],
+  );
+  assert.deepEqual(
+    parseSpxCandidateAwbs('{"candidates":[{"waybill_id":"SPXID002B"}]}'),
+    ["SPXID002B"],
+  );
 });
 
 test("formats a numeric SPX suffix and preserves a complete SPX AWB", () => {
