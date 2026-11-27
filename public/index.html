@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261127063715">
+  <link rel="stylesheet" href="style.css?v=20261127064003">
   <link rel="stylesheet" href="carrier.css">
 
   <!-- ========================================== -->
@@ -161,7 +161,7 @@
     </div>
     <div class="splash-segbar" id="splashSegbar"></div>
     <!-- Footer -->
-    <div class="splash-footer">v2.1.0 WEB &nbsp;•&nbsp; build 2026.11.27 06:37</div>
+    <div class="splash-footer">v2.1.0 WEB &nbsp;•&nbsp; build 2026.11.27 06:40</div>
   </div>
 </div>
 
@@ -202,20 +202,6 @@
         <textarea id="txtAwb" class="field-input textarea" rows="4" placeholder="004612348765&#10;004612348766"></textarea>
         <p class="field-hint">Masukkan 1+ nomor resi per baris untuk search batch</p>
         <button id="btnTrack" class="btn-primary" style="margin-top:12px;">Lacak</button>
-      </div>
-
-      <div id="spxDataGroup" class="sidebar-group hidden">
-        <div class="group-header">
-          <div class="group-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan-glow);"></div>
-          <span class="group-label">DATA SNAPSHOT SPX</span>
-        </div>
-        <label class="field-label" for="spxCandidatesFile">DAFTAR RESI VALID</label>
-        <input id="spxCandidatesFile" class="spx-file-input" type="file" accept=".json,.jsonl,.ndjson">
-        <p id="spxCandidatesInfo" class="field-hint">Opsional: unggah daftar kandidat. Tanpa file, pencarian tanggal/jam memakai nomor resi di kolom NOMOR RESI.</p>
-        <label class="field-label" for="spxTrackingFiles">HASIL TRACKING</label>
-        <input id="spxTrackingFiles" class="spx-file-input" type="file" accept=".json,application/json" multiple>
-        <p id="spxTrackingInfo" class="field-hint">Pilih hasil_match_spx.json atau file status JSON.</p>
-        <p class="spx-local-note">SPX dilacak melalui API live. Filter tanggal/jam hanya memeriksa resi yang dimasukkan atau ada di file kandidat.</p>
       </div>
 
       <!-- Group 2: Pencarian Spesifik -->
@@ -384,7 +370,7 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20261127063715"></script>
+<script type="module" src="app.js?v=20261127064003"></script>
 <script>
   // Unregister semua service worker yang aktif — SW bikin loop refresh
   if ('serviceWorker' in navigator) {

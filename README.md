@@ -14,13 +14,12 @@ Open `http://localhost:3000`. To preview only the static UI, serve the `public/`
 
 ## SPX live tracking and date search
 
-Select **SPX** in the carrier switcher. Enter known SPX AWBs in **NOMOR RESI** to track them live and filter their tracking history by date/time. A candidate file is optional; it can also supply AWBs for date/month search:
+Select **SPX** in the carrier switcher. The tracking and search fields are the same as SiCepat. Enter known SPX AWBs in **NOMOR RESI** to track them live and filter their tracking history by date/time:
 
-- optionally, a candidate file such as `valid_spx.jsonl` or `candidates.json`;
 - enter a date (`YYYY-MM-DD`) or month (`YYYY-MM`), and optionally a time (`HH:mm` or `HH:mm-HH:mm`);
 - press **Lacak** in the specific-search section. The app checks live SPX tracking history and filters results by the requested date/time.
 
-Snapshot JSON files can still be loaded for offline result matching. SPX's tracking endpoint requires a known AWB, so date/time search cannot discover unknown AWB numbers. SPX timestamps are compared in WIB.
+SPX's tracking endpoint requires a known AWB, so date/time search cannot discover unknown AWB numbers. SPX timestamps are compared in WIB.
 
 ## Vercel deployment
 

@@ -31,39 +31,7 @@
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-.spx-file-input {
-  width: 100%;
-  padding: 7px;
-  border: 1px dashed var(--border-subtle);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  background: var(--bg-input);
-  font: 10px var(--font);
-}
-
-.spx-file-input::file-selector-button {
-  margin-right: 7px;
-  padding: 5px 8px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-  cursor: pointer;
-  font: 600 9px var(--font);
-}
-
-.spx-local-note {
-  margin: 12px 0 0;
-  padding: 8px 9px;
-  border-left: 2px solid var(--accent);
-  color: var(--text-muted);
-  background: var(--accent-dim);
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-#specificSearchGroup.hidden,
-#spxDataGroup.hidden {
+#specificSearchGroup.hidden {
   display: none !important;
 }
 

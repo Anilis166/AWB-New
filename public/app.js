@@ -11,15 +11,13 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { getGuestUser } from "./guest.js?v=20261127063715";
+import { getGuestUser } from "./guest.js?v=20261127064003";
 import {
   buildSpxResult,
-  filterSpxCandidates,
+  formatSpxAwb,
   normalizeResi,
   parseSpxAwbList,
-  parseSpxCandidates,
-  parseSpxTracking,
-} from "./spx-data.js?v=20261127063715";
+} from "./spx-data.js?v=20261127064003";
 
 // ── Constants ──
 const PREFIX = "0046";
@@ -30,8 +28,6 @@ const SAVE_EVERY = 100;
 
 // ── State ──
 let results = [];
-let spxCandidates = new Map();
-let spxTracking = new Map();
 let cts = null; // { cancelled: false }
 let _paused = false; // true = pause (keep scan UI), false = stop/reset
 let nextResolver = null;
@@ -250,9 +246,6 @@ async function initApp() {
   document.querySelectorAll(".carrier-option").forEach((button) => {
     button.addEventListener("click", () => setCarrierMode(button.dataset.carrier));
   });
-  document.getElementById("spxCandidatesFile").addEventListener("change", loadSpxCandidates);
-  document.getElementById("spxTrackingFiles").addEventListener("change", loadSpxTracking);
-
   // Theme selector buttons
   document.querySelectorAll("#themeSelector .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -394,54 +387,11 @@ function setCarrierMode(courier) {
     button.classList.toggle("active", button.dataset.carrier === courier);
   });
   document.getElementById("specificSearchGroup").classList.remove("hidden");
-  document.getElementById("spxDataGroup").classList.toggle("hidden", !isSpx);
   document.getElementById("btnTrackSearch").classList.remove("hidden");
   document.getElementById("appTitle").textContent = isSpx ? "AWB Tracker · SPX" : "SiCepat Jinxpro";
-  document.getElementById("txtTanggal").placeholder = isSpx ? "2026-11-20 atau 2026-11" : "2026-07-11";
-  document.getElementById("txtAwb").placeholder = isSpx
-    ? "Tempel satu atau beberapa nomor resi SPX"
-    : "004612348765\n004612348766";
+  document.getElementById("txtTanggal").placeholder = "2026-07-11";
+  document.getElementById("txtAwb").placeholder = "Tempel satu atau beberapa nomor resi, satu per baris";
   log(`Kurir aktif: ${isSpx ? "SPX (tracking live dengan filter tanggal/jam)" : "SiCepat"}.`, "system");
-}
-
-async function loadSpxCandidates(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  try {
-    spxCandidates = parseSpxCandidates(await file.text());
-    document.getElementById("spxCandidatesInfo").textContent =
-      `${file.name} · ${spxCandidates.size.toLocaleString("id-ID")} resi`;
-    log(`Data kandidat SPX dimuat: ${spxCandidates.size} resi.`, "success");
-  } catch (error) {
-    spxCandidates = new Map();
-    document.getElementById("spxCandidatesInfo").textContent = "Gagal memuat data kandidat.";
-    log(`Data kandidat SPX gagal dimuat: ${error.message}`, "error");
-  }
-}
-
-async function loadSpxTracking(event) {
-  const files = [...event.target.files];
-  if (files.length === 0) return;
-  try {
-    const sources = await Promise.all(files.map(async (file) => parseSpxTracking(await file.text())));
-    const combined = new Map();
-    for (const source of sources) {
-      for (const [resi, entry] of source) {
-        const previous = combined.get(resi);
-        if (!previous || entry.latest_checkpoint_date >= previous.latest_checkpoint_date) {
-          combined.set(resi, entry);
-        }
-      }
-    }
-    spxTracking = combined;
-    document.getElementById("spxTrackingInfo").textContent =
-      `${files.length} file · ${spxTracking.size.toLocaleString("id-ID")} status`;
-    log(`Data tracking SPX dimuat: ${spxTracking.size} resi dari ${files.length} file.`, "success");
-  } catch (error) {
-    spxTracking = new Map();
-    document.getElementById("spxTrackingInfo").textContent = "Gagal memuat data tracking.";
-    log(`Data tracking SPX gagal dimuat: ${error.message}`, "error");
-  }
 }
 
 async function trackSpxBatch(awbList) {
@@ -453,26 +403,24 @@ async function trackSpxBatch(awbList) {
 
   for (const awb of awbList) {
     let liveEntry = null;
+    const formattedAwb = formatSpxAwb(awb);
     try {
-      const response = await fetch(`/api/spx-track?awb=${encodeURIComponent(awb)}`, {
+      const response = await fetch(`/api/spx-track?awb=${encodeURIComponent(formattedAwb)}`, {
         signal: AbortSignal.timeout(15000),
       });
       const payload = await response.json();
       if (response.ok && payload?.ok) liveEntry = payload.result;
     } catch (error) {
-      log(`SPX live tidak tersedia untuk ${awb}: ${error.message}`, "warning");
+      log(`SPX live tidak tersedia untuk ${formattedAwb}: ${error.message}`, "warning");
     }
 
-    if (liveEntry) {
-      const liveTracking = new Map([[normalizeResi(awb), liveEntry]]);
-      const mergedTracking = new Map([...spxTracking, ...liveTracking]);
-      results.push(buildSpxResult(awb, spxCandidates, mergedTracking));
-    } else {
-      results.push(buildSpxResult(awb, spxCandidates, spxTracking));
-    }
+    const tracking = liveEntry
+      ? new Map([[normalizeResi(formattedAwb), liveEntry]])
+      : new Map();
+    results.push(buildSpxResult(formattedAwb, new Map(), tracking));
     const result = results[results.length - 1];
     if (result.status !== "Tidak ditemukan" && result.status !== "Belum ada status") {
-      log(`✓ ${awb} — ${result.status}`, "success");
+      log(`✓ ${formattedAwb} — ${result.status}`, "success");
     }
   }
 
@@ -483,11 +431,9 @@ async function trackSpxBatch(awbList) {
 }
 
 async function trackSpxSearch(targetDate, jam, timeRange, kota) {
-  const fileCandidates = filterSpxCandidates(spxCandidates, targetDate, timeRange);
-  const enteredAwbs = parseSpxAwbList(document.getElementById("txtAwb").value);
-  const candidates = fileCandidates.length > 0 ? fileCandidates : enteredAwbs;
-  if (candidates.length === 0) {
-    log("Masukkan nomor resi SPX yang ingin dicari di kolom NOMOR RESI. File daftar kandidat hanya diperlukan jika ingin mencari dari daftar kandidat.", "warning");
+  const awbs = parseSpxAwbList(document.getElementById("txtAwb").value);
+  if (awbs.length === 0) {
+    log("Masukkan nomor resi SPX di kolom NOMOR RESI terlebih dahulu. Pencarian tanggal/jam akan memeriksa riwayat live dari nomor tersebut.", "warning");
     return;
   }
 
@@ -506,7 +452,7 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
   results = [];
   startTime = Date.now();
   log(`=== PENCARIAN SPX: TANGGAL/BULAN + JAM ===`, "system");
-  log(`Target=${targetDate} | Jam=${jam || "semua"} | Resi=${candidates.length}${kota ? ` | Kota=${kota}` : ""}`, "info");
+  log(`Target=${targetDate} | Jam=${jam || "semua"} | Resi=${awbs.length}${kota ? ` | Kota=${kota}` : ""}`, "info");
 
   let nextIndex = 0;
   let checked = 0;
@@ -514,21 +460,15 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
   const worker = async () => {
     while (!cts.cancelled) {
       const index = nextIndex++;
-      if (index >= candidates.length) return;
-      const candidate = candidates[index];
-      const candidateNumber = normalizeResi(candidate.resi);
-      const awb = candidateNumber.startsWith("SPXID")
-        ? candidateNumber
-        : `SPXID${candidateNumber.replace(/B$/, "")}B`;
+      if (index >= awbs.length) return;
+      const awb = formatSpxAwb(awbs[index]);
       try {
         const response = await fetch(`/api/spx-track?awb=${encodeURIComponent(awb)}`, {
           signal: cts.signal,
         });
         const payload = await response.json();
         checked++;
-        const entry = response.ok && payload?.ok
-          ? payload.result
-          : spxTracking.get(normalizeResi(awb)) || spxTracking.get(candidateNumber);
+        const entry = response.ok && payload?.ok ? payload.result : null;
         if (entry) {
           const records = entry.records?.length
             ? entry.records
@@ -557,7 +497,7 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
 
           if (matchedEvent) {
             const tracking = new Map([[normalizeResi(awb), entry]]);
-            const result = buildSpxResult(awb, spxCandidates, tracking);
+            const result = buildSpxResult(awb, new Map(), tracking);
             const matchedDate = parseSpxDate(matchedEvent.actual_time || Number(matchedEvent.timestamp) * 1000);
             const matchedDateTime = formatSpxDateTime(matchedDate);
             result.tanggal = matchedDateTime.date;
@@ -581,14 +521,14 @@ async function trackSpxSearch(targetDate, jam, timeRange, kota) {
       }
 
       if (checked > 0 && checked % 25 === 0) {
-        log(`SPX dipindai ${checked}/${candidates.length} | cocok=${results.length} | gagal=${errors}`, "info");
+        log(`SPX dipindai ${checked}/${awbs.length} | cocok=${results.length} | gagal=${errors}`, "info");
         updateStats(new Date(Date.now() - startTime), checked);
       }
     }
   };
 
   try {
-    await Promise.all(Array.from({ length: Math.min(4, candidates.length) }, worker));
+    await Promise.all(Array.from({ length: Math.min(4, awbs.length) }, worker));
     renderResultsNow();
     updateStats(new Date(Date.now() - startTime), checked);
     log(cts.cancelled
