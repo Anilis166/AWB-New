@@ -2,9 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildSpxResult,
-  filterSpxCandidateRows,
   formatSpxAwb,
-  parseSpxCandidateRows,
   parseSpxAwbList,
 } from "./public/spx-data.js";
 
@@ -19,34 +17,6 @@ test("returns no AWBs for empty input", () => {
   assert.deepEqual(parseSpxAwbList(" \n\t "), []);
 });
 
-test("reads and deduplicates AWBs and dates from JSONL and candidate JSON files", () => {
-  assert.deepEqual(
-    parseSpxCandidateRows('{"resi":"spxid001b","date":"2026-11-20"}\n{"awb":"SPXID001B"}'),
-    [{ resi: "SPXID001B", date: "2026-11-20" }],
-  );
-  assert.deepEqual(
-    parseSpxCandidateRows('{"candidates":[{"waybill_id":"SPXID002B"}]}'),
-    [{ resi: "SPXID002B", date: "" }],
-  );
-});
-
-test("filters local SPX candidates by requested date, month and time", () => {
-  const candidates = parseSpxCandidateRows([
-    '{"resi":"SPXID001B","date":"2026-11-20T10:59:00+07:00"}',
-    '{"resi":"SPXID002B","date":"2026-11-20T11:30:00+07:00"}',
-    '{"resi":"SPXID003B","date":"2026-11-21T11:30:00+07:00"}',
-  ].join("\n"));
-  assert.deepEqual(
-    filterSpxCandidateRows(candidates, "2026-11-20", { start: 660, end: 720 })
-      .map(({ resi }) => resi),
-    ["SPXID002B"],
-  );
-  assert.deepEqual(
-    filterSpxCandidateRows(candidates, "2026-11", null).map(({ resi }) => resi),
-    ["SPXID001B", "SPXID002B", "SPXID003B"],
-  );
-  assert.deepEqual(filterSpxCandidateRows(candidates, "2026-08-05", null), []);
-});
 test("formats a numeric SPX suffix and preserves a complete SPX AWB", () => {
   assert.equal(formatSpxAwb("001B"), "SPXID001B");
   assert.equal(formatSpxAwb("spxid001b"), "SPXID001B");

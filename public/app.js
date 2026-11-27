@@ -11,15 +11,13 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { getGuestUser } from "./guest.js?v=20261127070821";
+import { getGuestUser } from "./guest.js?v=20261127071133";
 import {
   buildSpxResult,
-  filterSpxCandidateRows,
   formatSpxAwb,
   normalizeResi,
-  parseSpxCandidateRows,
   parseSpxAwbList,
-} from "./spx-data.js?v=20261127070821";
+} from "./spx-data.js?v=20261127071133";
 
 // ── Constants ──
 const PREFIX = "0046";
@@ -396,23 +394,6 @@ function setCarrierMode(courier) {
   log(`Kurir aktif: ${isSpx ? "SPX (tracking live dengan filter tanggal/jam)" : "SiCepat"}.`, "system");
 }
 
-function selectSpxAwbFile() {
-  return new Promise((resolve) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json,.jsonl,.ndjson,text/plain,application/json";
-    input.hidden = true;
-    const finish = (file) => {
-      input.remove();
-      resolve(file);
-    };
-    input.addEventListener("change", () => finish(input.files?.[0] ?? null), { once: true });
-    input.addEventListener("cancel", () => finish(null), { once: true });
-    document.body.append(input);
-    input.click();
-  });
-}
-
 async function trackSpxBatch(awbList) {
   const button = document.getElementById("btnTrack");
   button.disabled = true;
@@ -454,7 +435,7 @@ async function trackSpxSearch(
   jam,
   timeRange,
   kota,
-  awbs = parseSpxAwbList(document.getElementById("txtAwb").value).map((resi) => ({ resi, date: "" })),
+  awbs = parseSpxAwbList(document.getElementById("txtAwb").value),
   source = "kolom NOMOR RESI",
 ) {
   if (awbs.length === 0) {
@@ -486,7 +467,7 @@ async function trackSpxSearch(
     while (!cts.cancelled) {
       const index = nextIndex++;
       if (index >= awbs.length) return;
-      const awb = formatSpxAwb(awbs[index].resi);
+      const awb = formatSpxAwb(awbs[index]);
       try {
         const response = await fetch(`/api/spx-track?awb=${encodeURIComponent(awb)}`, {
           signal: cts.signal,
@@ -666,30 +647,12 @@ async function btnTrackSearchClick() {
       log("Format jam harus HH:mm atau HH:mm-HH:mm. Contoh: 11:00-13:00", "warning");
       return;
     }
-    let awbs = parseSpxAwbList(document.getElementById("txtAwb").value)
-      .map((resi) => ({ resi, date: "" }));
-    let source = "kolom NOMOR RESI";
+    const awbs = parseSpxAwbList(document.getElementById("txtAwb").value);
     if (awbs.length === 0) {
-      const file = await selectSpxAwbFile();
-      if (!file) {
-        log("Pilih file daftar AWB SPX untuk memulai Scan.", "warning");
-        return;
-      }
-      try {
-        const candidateRows = parseSpxCandidateRows(await file.text());
-        awbs = filterSpxCandidateRows(candidateRows, tgl, timeRange);
-      } catch (error) {
-        log(`File daftar AWB SPX tidak valid: ${error.message}`, "error");
-        return;
-      }
-      if (awbs.length === 0) {
-        log(`File tidak memiliki AWB untuk tanggal/jam ${tgl}${jam ? ` ${jam}` : ""}.`, "warning");
-        return;
-      }
-      source = file.name;
-      log(`Daftar lokal dimuat: ${awbs.length} AWB sesuai filter dari ${file.name}.`, "info");
+      log("SPX memerlukan nomor AWB untuk tracking. Scan otomatis berdasarkan MID/tanggal belum tersedia pada API SPX yang terhubung.", "warning");
+      return;
     }
-    await trackSpxSearch(tgl, jam, timeRange, kota, awbs, source);
+    await trackSpxSearch(tgl, jam, timeRange, kota, awbs, "kolom NOMOR RESI");
     return;
   }
 
