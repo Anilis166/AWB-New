@@ -11,13 +11,13 @@ import {
   buildDestination, buildOrigin, matchDestination, getBiteshipDiag,
   createBiteshipRow, escapeXml, cleanCity
 } from "./helpers.js";
-import { getGuestUser } from "./guest.js?v=20261127071133";
+import { getGuestUser } from "./guest.js?v=20261127072332";
 import {
   buildSpxResult,
   formatSpxAwb,
   normalizeResi,
   parseSpxAwbList,
-} from "./spx-data.js?v=20261127071133";
+} from "./spx-data.js?v=20261127072332";
 
 // ── Constants ──
 const PREFIX = "0046";
@@ -510,7 +510,7 @@ async function trackSpxSearch(
             result.jam = matchedDateTime.time;
             result.lastUpdate = `${result.tanggal} ${result.jam}`;
             result.status = matchedEvent.status || result.status;
-            result.receiver = matchedEvent.message || result.receiver;
+            result.trackingNote = matchedEvent.message || matchedEvent.description || result.trackingNote;
             results.push(result);
             renderResults();
             log(`✓ ${awb} — ${result.tanggal} ${result.jam} — ${result.status}`, "success");
@@ -1830,7 +1830,7 @@ function createResultCard(item, hideAwb) {
       <div class="result-field-row"><span class="result-field-label">TANGGAL</span><span class="result-field-value value-mono">${escapeXml(item.tanggal)}</span></div>
       <div class="result-field-row"><span class="result-field-label">JAM</span><span class="result-field-value value-mono">${escapeXml(item.jam)}</span></div>
       <div class="result-field-row"><span class="result-field-label">PENGIRIM</span><span class="result-field-value">${escapeXml(item.sender || "-")}</span></div>
-      <div class="result-field-row"><span class="result-field-label">PENERIMA</span><span class="result-field-value">${escapeXml(item.receiver)}</span></div>
+      <div class="result-field-row"><span class="result-field-label">${item.courier === "SPX" ? "CATATAN TERAKHIR" : "PENERIMA"}</span><span class="result-field-value">${escapeXml(item.courier === "SPX" ? item.trackingNote || "-" : item.receiver || "-")}</span></div>
       <div class="result-field-row"><span class="result-field-label">ALMT. PENGIRIM</span><span class="result-field-value">${escapeXml(item.senderAddress || "-")}</span></div>
       <div class="result-field-row"><span class="result-field-label">ALMT. PENERIMA</span><span class="result-field-value">${escapeXml(item.receiverAddress || "-")}</span></div>
     </div>

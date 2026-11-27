@@ -14,7 +14,17 @@ function corsHeaders() {
 function locationName(location) {
   if (!location) return "";
   if (typeof location === "string") return location;
-  return location.location_name || location.full_address || "";
+  return location.location_name || location.name || "";
+}
+
+function checkpointTime(record) {
+  if (record.timestamp) return new Date(Number(record.timestamp) * 1000).toISOString();
+  if (typeof record.actual_time === "number") return new Date(record.actual_time * 1000).toISOString();
+  return String(record.actual_time || "");
+}
+
+function checkpointLocation(record) {
+  return locationName(record.current_location) || locationName(record.next_location);
 }
 
 export default async function handler(req, res) {
@@ -65,20 +75,14 @@ export default async function handler(req, res) {
       resi: awb,
       waybill_id: awb,
       latest_status: lastRecord.status || lastRecord.tracking_name || lastRecord.description || data?.current_status || "Dalam proses",
-      latest_checkpoint_date: lastRecord.timestamp
-        ? new Date(Number(lastRecord.timestamp) * 1000).toISOString()
-        : lastRecord.actual_time
-        ? String(lastRecord.actual_time)
-        : data?.latest_checkpoint_date || "",
-      latest_note: lastRecord.message || lastRecord.description || lastRecord.buyer_description || "",
-      location: locationName(lastRecord.current_location) || locationName(lastRecord.next_location),
+      latest_checkpoint_date: checkpointTime(lastRecord) || data?.latest_checkpoint_date || "",
+      latest_note: lastRecord.message || lastRecord.description || "",
+      location: checkpointLocation(lastRecord),
       records: records.map((record) => ({
-        ...record,
-        actual_time: record.timestamp
-          ? new Date(Number(record.timestamp) * 1000).toISOString()
-          : typeof record.actual_time === "number"
-            ? new Date(record.actual_time * 1000).toISOString()
-            : String(record.actual_time || ""),
+        actual_time: checkpointTime(record),
+        status: String(record.status || record.tracking_name || ""),
+        description: String(record.description || record.message || ""),
+        location: checkpointLocation(record),
       })),
     };
 
